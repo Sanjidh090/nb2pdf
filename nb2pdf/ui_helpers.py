@@ -177,8 +177,6 @@ def extract_headings(html_content: str) -> list:
     Returns:
         List of (level, text) tuples.
     """
-    import re
-    
     headings = []
     # Match h1-h6 tags
     pattern = r'<h([1-6])[^>]*>(.*?)</h\1>'

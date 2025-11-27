@@ -6,6 +6,7 @@ and Markdown files to HTML and PDF using multiple backends.
 """
 
 import io
+import re
 from typing import Tuple, Optional, Union
 import nbformat
 from nbconvert import HTMLExporter
@@ -56,7 +57,6 @@ def python_to_notebook(py_content: str) -> nbformat.NotebookNode:
     # Split by cell markers if present, otherwise single cell
     if "# %%" in py_content or "# In[" in py_content:
         # Split on common cell markers
-        import re
         cells = re.split(r'(?:^# %%.*$|^# In\[\d*\]:.*$)', py_content, flags=re.MULTILINE)
         for cell_content in cells:
             cell_content = cell_content.strip()

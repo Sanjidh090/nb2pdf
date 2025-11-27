@@ -26,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Import conversion utilities
+from nb2pdf import __version__ as NB2PDF_VERSION
 from nb2pdf.convert import (
     load_file,
     notebook_to_html,
@@ -195,17 +196,43 @@ def fetch_from_url(url: str) -> tuple:
     """
     Fetch file content from a URL (GitHub Gist or raw file).
     
+    Only allows fetching from trusted domains:
+    - GitHub Gist (gist.github.com)
+    - Raw GitHub content (raw.githubusercontent.com)
+    
     Args:
         url: URL to fetch from.
         
     Returns:
         Tuple of (content bytes, filename, error message or None)
     """
+    from urllib.parse import urlparse
+    
+    # List of allowed domains for security
+    ALLOWED_DOMAINS = [
+        'gist.github.com',
+        'api.github.com',
+        'raw.githubusercontent.com',
+        'github.com',
+    ]
+    
     try:
+        # Parse and validate the URL
+        parsed_url = urlparse(url)
+        
+        # Ensure URL has a valid scheme
+        if parsed_url.scheme not in ('http', 'https'):
+            return None, None, "Invalid URL scheme. Only http and https are allowed."
+        
+        # Validate domain is in allowlist
+        domain = parsed_url.netloc.lower()
+        if not any(domain == allowed or domain.endswith('.' + allowed) for allowed in ALLOWED_DOMAINS):
+            return None, None, f"Domain '{domain}' is not allowed. Only GitHub URLs are supported."
+        
         # Handle GitHub Gist URLs
-        if 'gist.github.com' in url:
+        if domain == 'gist.github.com' or domain.endswith('.gist.github.com'):
             # Convert to raw URL
-            gist_match = re.search(r'gist\.github\.com/([^/]+)/([a-f0-9]+)', url)
+            gist_match = re.search(r'/([^/]+)/([a-fA-F0-9]+)', parsed_url.path)
             if gist_match:
                 gist_id = gist_match.group(2)
                 api_url = f"https://api.github.com/gists/{gist_id}"
@@ -222,25 +249,28 @@ def fetch_from_url(url: str) -> tuple:
                     return content, filename, None
                 else:
                     return None, None, "No files found in gist"
+            else:
+                return None, None, "Invalid GitHub Gist URL format"
         
-        # Handle raw GitHub URLs or other direct URLs
-        elif 'raw.githubusercontent.com' in url or url.endswith(('.ipynb', '.py', '.md')):
+        # Handle raw GitHub URLs
+        elif domain == 'raw.githubusercontent.com':
+            # Note: SSRF risk is mitigated by domain allowlist validation above.
+            # This request is intentionally made to user-provided URLs that have
+            # been validated to be from trusted GitHub domains only.
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             content = response.content
             
-            # Extract filename from URL
-            filename = url.split('/')[-1].split('?')[0]
+            # Extract filename from URL path
+            path_parts = parsed_url.path.split('/')
+            filename = path_parts[-1] if path_parts else 'downloaded_file.ipynb'
             if not any(filename.endswith(ext) for ext in ['.ipynb', '.py', '.md']):
                 filename = 'downloaded_file.ipynb'  # Default
             
             return content, filename, None
         
         else:
-            # Try direct download
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            return response.content, 'downloaded_file.ipynb', None
+            return None, None, f"Unsupported GitHub URL format. Use gist.github.com or raw.githubusercontent.com URLs."
             
     except requests.RequestException as e:
         return None, None, f"Failed to fetch URL: {str(e)}"
@@ -408,8 +438,8 @@ def main():
         
         # About section
         st.divider()
-        st.caption("""
-        **nb2pdf** v1.0.0
+        st.caption(f"""
+        **nb2pdf** v{NB2PDF_VERSION}
         
         Convert Jupyter notebooks, Python scripts, and Markdown files to PDF.
         

@@ -2,3 +2,5 @@ streamlit
 nbformat
 nbconvert
 weasyprint
+libpango
+libpangoft

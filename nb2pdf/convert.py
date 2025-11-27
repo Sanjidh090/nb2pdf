@@ -230,7 +230,9 @@ def html_to_pdf_weasy(html_content: str) -> bytes:
     except ImportError as e:
         raise ImportError(
             "WeasyPrint is not installed or system dependencies are missing. "
-            "Install with: pip install weasyprint"
+            "Install with: pip install weasyprint. "
+            "Also ensure system dependencies are installed (pango, cairo). "
+            "See README for platform-specific instructions."
         ) from e
 
     try:

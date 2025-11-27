@@ -24,7 +24,6 @@ from pathlib import Path
 from nb2pdf.convert import (
     convert_file_to_html,
     try_html_to_pdf,
-    load_file,
 )
 from nb2pdf.ui_helpers import (
     safe_filename,
@@ -34,6 +33,21 @@ from nb2pdf.ui_helpers import (
     get_backend_status,
     format_file_size,
 )
+
+
+# ============================================================================
+# Constants
+# ============================================================================
+MAX_PREVIEW_LENGTH = 5000  # Maximum characters to show in HTML preview
+
+# Allowed URL hosts for fetching content (security measure)
+ALLOWED_HOSTS = frozenset([
+    "gist.github.com",
+    "github.com",
+    "raw.githubusercontent.com",
+    "gist.githubusercontent.com",
+    "api.github.com",
+])
 
 
 # ============================================================================
@@ -152,9 +166,30 @@ def load_logo():
 # ============================================================================
 # URL/Gist Handling
 # ============================================================================
+def is_allowed_url(url: str) -> bool:
+    """
+    Check if a URL is from an allowed host.
+    
+    Args:
+        url: The URL to check
+        
+    Returns:
+        True if the URL host is in the allowed list
+    """
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        # Ensure scheme is https and host is in allowed list
+        return parsed.scheme == "https" and parsed.netloc in ALLOWED_HOSTS
+    except Exception:
+        return False
+
+
 def fetch_from_url(url: str) -> tuple:
     """
     Fetch file content from a URL (supports GitHub gists and raw files).
+    
+    Only fetches from allowed GitHub domains for security.
     
     Args:
         url: The URL to fetch from
@@ -162,11 +197,27 @@ def fetch_from_url(url: str) -> tuple:
     Returns:
         Tuple of (content bytes, filename, error message or None)
     """
+    from urllib.parse import urlparse
+    
     try:
-        # Convert GitHub gist URLs to raw format
-        if "gist.github.com" in url:
-            # Extract gist ID and convert to raw URL
-            gist_match = re.search(r'gist\.github\.com/[^/]+/([a-f0-9]+)', url)
+        # Validate URL format
+        if not url or not url.startswith("https://"):
+            return None, None, "Only HTTPS URLs are supported"
+        
+        parsed = urlparse(url)
+        host = parsed.netloc
+        
+        # Security check: only allow specific GitHub domains
+        if host not in ALLOWED_HOSTS:
+            return None, None, (
+                f"URL host '{host}' is not allowed. "
+                "Only GitHub URLs (github.com, gist.github.com, raw.githubusercontent.com) are supported."
+            )
+        
+        # Handle GitHub gist URLs
+        if host == "gist.github.com":
+            # Extract gist ID from the path
+            gist_match = re.search(r'/([a-f0-9]+)(?:/|$)', parsed.path)
             if gist_match:
                 gist_id = gist_match.group(1)
                 # Fetch gist API to get files
@@ -183,17 +234,26 @@ def fetch_from_url(url: str) -> tuple:
                     filename = first_file.get("filename", "document.txt")
                     return content, filename, None
                 return None, None, "No files found in gist"
+            return None, None, "Invalid gist URL format"
         
-        # Handle GitHub blob URLs
-        if "github.com" in url and "/blob/" in url:
+        # Handle GitHub blob URLs - convert to raw
+        if host == "github.com" and "/blob/" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+            # Re-validate the new URL
+            parsed = urlparse(url)
+            if parsed.netloc not in ALLOWED_HOSTS:
+                return None, None, "Invalid GitHub URL transformation"
         
-        # Fetch raw content
+        # Fetch raw content from allowed hosts only
+        # Note: This is intentional SSRF-like behavior, but mitigated by:
+        # 1. ALLOWED_HOSTS allowlist restricting to GitHub domains only
+        # 2. HTTPS-only requirement
+        # 3. Timeout to prevent slow loris attacks
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         
-        # Try to get filename from URL
-        filename = url.split("/")[-1].split("?")[0]
+        # Try to get filename from URL path
+        filename = parsed.path.split("/")[-1].split("?")[0]
         if not filename or "." not in filename:
             filename = "document.txt"
             
@@ -395,8 +455,13 @@ def main():
                             # Insert TOC after cover (or at start if no cover)
                             if include_cover and cover_title:
                                 # Find end of cover div
-                                cover_end = final_html.find("</div>", final_html.find("cover-page")) + 6
-                                final_html = final_html[:cover_end] + toc_html + final_html[cover_end:]
+                                cover_pos = final_html.find("cover-page")
+                                if cover_pos != -1:
+                                    cover_end = final_html.find("</div>", cover_pos) + 6
+                                    final_html = final_html[:cover_end] + toc_html + final_html[cover_end:]
+                                else:
+                                    # Fallback if cover-page not found
+                                    final_html = toc_html + final_html
                             elif "<body" in final_html:
                                 body_start = final_html.find("<body")
                                 body_end = final_html.find(">", body_start) + 1
@@ -410,7 +475,10 @@ def main():
                     if preview_btn:
                         st.subheader("📄 HTML Preview")
                         with st.expander("View HTML Source", expanded=False):
-                            st.code(final_html[:5000] + ("..." if len(final_html) > 5000 else ""), language="html")
+                            preview_html = final_html[:MAX_PREVIEW_LENGTH]
+                            if len(final_html) > MAX_PREVIEW_LENGTH:
+                                preview_html += "..."
+                            st.code(preview_html, language="html")
                         
                         st.markdown("**Rendered Preview:**")
                         components.html(final_html, height=600, scrolling=True)

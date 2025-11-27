@@ -106,7 +106,7 @@ def make_cover_html(
             color: {text_color};
         ">{title_safe}</h1>
     </div>
-    {"<p style='font-size: 1.25rem; color: " + subtitle_color + "; margin: 0.5rem 0;'>" + author_safe + "</p>" if author else ""}
+    {f'<p style="font-size: 1.25rem; color: {subtitle_color}; margin: 0.5rem 0;">{author_safe}</p>' if author else ""}
     <p style="font-size: 1rem; color: {subtitle_color}; margin: 0.5rem 0;">{date_safe}</p>
 </div>
 """

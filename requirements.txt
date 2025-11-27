@@ -1,6 +1,20 @@
-streamlit
-nbformat
-nbconvert
-weasyprint
-libpango
-libpangoft
+# Core Streamlit dependencies
+streamlit>=1.28.0
+nbformat>=5.9.0
+nbconvert>=7.0.0
+jinja2>=3.1.0
+
+# Code highlighting and markdown processing
+pygments>=2.16.0
+markdown>=3.5.0
+
+# HTTP requests for URL fetching
+requests>=2.31.0
+
+# PDF backends (install at least one)
+# WeasyPrint - recommended for high-quality PDFs (may require system libraries)
+weasyprint>=60.0
+
+# xhtml2pdf - pure Python fallback (install if weasyprint is unavailable)
+# Uncomment the line below if needed:
+# xhtml2pdf>=0.2.11

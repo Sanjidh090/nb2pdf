@@ -182,16 +182,13 @@ def get_logo_svg():
 
 def render_header():
     """Render the application header with logo."""
-    logo_svg = get_logo_svg()
-    st.markdown(f"""
-    <div class="main-header">
-        {logo_svg}
-        <div>
-            <h1>Code to PDF Converter</h1>
-            <p style="margin: 0; color: #666;">Convert notebooks, scripts, and markdown to beautiful PDFs</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        logo_svg = get_logo_svg()
+        st.markdown(logo_svg, unsafe_allow_html=True)
+    with col2:
+        st.title("📄 Code to PDF Converter")
+        st.caption("Convert notebooks, scripts, and markdown to beautiful PDFs")
 
 
 def fetch_from_url(url: str) -> tuple:

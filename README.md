@@ -4,6 +4,8 @@ A Streamlit web application that converts Jupyter notebooks (`.ipynb`), Python s
 
 ![nb2pdf Logo](assets/logo.svg)
 
+🚀 **Try it now:** 
+**[Launch nb2pdf](https://nb2pdf.streamlit.app/)**
 ## ✨ Features
 
 - **Multiple Input Formats**: Support for Jupyter Notebooks, Python scripts, and Markdown files
@@ -16,6 +18,17 @@ A Streamlit web application that converts Jupyter notebooks (`.ipynb`), Python s
 - **Live Preview**: Preview the HTML output before generating PDF
 - **Always-Available HTML Download**: Download HTML even if PDF backends are unavailable
 
+## Screenshots
+<img width="480" height="260" alt="image" src="https://github.com/user-attachments/assets/a38136cc-ab92-45d4-a0cc-c6f056a9abda" />
+<img width="450" height="240" alt="image" src="https://github.com/user-attachments/assets/590e25c1-f3f9-4452-a663-e3d3f8e1c960" />
+<img width="934" height="380" alt="image" src="https://github.com/user-attachments/assets/c50c0d49-c616-461d-8838-bbc181c79571" />
+
+
+## 🌐 Get started
+
+Click **Try nb2pdf now** above, upload your file, and download your PDF.  
+**[Launch nb2pdf](https://nb2pdf.streamlit.app/)**
+That’s it — no setup, no installs.
 ## 🚀 Quick Start
 
 ### Run Locally
